@@ -1,0 +1,71 @@
+# OT Anomaly Detector — Modbus TCP + Isolation Forest
+
+Progetto didattico per il rilevamento di anomalie su dati industriali in tempo reale.  
+Simula un PLC via **Modbus TCP** e applica **Isolation Forest** (scikit-learn) per l'anomaly detection, con log su file delle anomalie rilevate.
+
+## Architettura
+
+```
+[plc_simulator.py]          [monitor.py]
+ Modbus TCP Server    →      Modbus TCP Client
+ (PLC simulato)              + Isolation Forest
+ 127.0.0.1:5020              + Logger su file .log
+```
+
+## Requisiti
+
+```bash
+pip install -r requirements.txt
+```
+
+## Utilizzo
+
+**Terminale 1 — avvia il PLC simulato:**
+```bash
+python plc_simulator.py
+```
+
+**Terminale 2 — avvia il monitoring:**
+```bash
+python monitor.py
+```
+
+Le anomalie vengono scritte automaticamente in un file `anomalie_YYYYMMDD_HHMMSS.log`.
+
+## Formato log
+
+```
+2026-06-20 14:32:07 | WARNING  | OUTLIER | Temp=91.34°C | Press=1.12 bar | Score=-0.1823 | Anomalie_su_5=1
+2026-06-20 14:32:19 | CRITICAL | ALERT_CONFERMATO | Temp=97.56°C | Press=0.88 bar | Score=-0.2541 | Anomalie_su_5=3
+```
+
+- `WARNING` → outlier singolo, in attesa di conferma dalla finestra temporale  
+- `CRITICAL` → almeno 3 anomalie nelle ultime 5 letture → alert confermato
+
+## Adattamento a PLC reale
+
+In `monitor.py` modifica le costanti in cima al file:
+
+```python
+HOST = "192.168.1.10"  # IP del PLC reale
+PORT = 502             # porta Modbus TCP standard (richiede sudo su Linux)
+SLAVE_ID = 1           # slave ID del dispositivo
+```
+
+I NodeID dei registri (indirizzo 0 → Temperatura, 1 → Pressione) vanno verificati  
+sul datasheet del PLC o tramite un client Modbus come **ModScan** o **QModMaster**.
+
+## Protocolli supportati (estensioni future)
+
+| Protocollo | Porta default | Libreria Python     |
+|------------|---------------|---------------------|
+| Modbus TCP | 502           | `pymodbus`          |
+| OPC-UA     | 4840          | `asyncua`           |
+| MQTT       | 1883          | `paho-mqtt`         |
+
+## Stack tecnologico
+
+- Python 3.10+
+- pymodbus 3.6.9
+- scikit-learn (IsolationForest)
+- pandas / numpy
